@@ -10,7 +10,7 @@ readme = "README.md"
 license = "0BSD"
 requires-python = ">=3.12"
 dependencies = [
-    "uproot-science<1",
+    "uproot-science @ git+https://github.com/mrpg/uproot.git@main",
     "httpx>=0.28,<1",
 ]
 
@@ -27,7 +27,7 @@ dev = [
 
 [project.optional-dependencies]
 pg = [
-    "uproot-science[pg]<1",
+    "uproot-science[pg] @ git+https://github.com/mrpg/uproot.git@main",
 ]
 
 [tool.setuptools]
