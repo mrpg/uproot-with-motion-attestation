@@ -30,7 +30,7 @@ binding is stateless: no challenge is written to participant storage.
 The integration has deliberately narrow seams:
 
 - [`ProjectBody.html`](ProjectBody.html) loads one project-wide browser adapter
-  on real participant pages, but not simulated pages.
+  on participant pages.
 - [`_static/motion-attestation.js`](_static/motion-attestation.js) collects
   signals and uses Uproot's `beginSubmit()` and `api2()` APIs to attest before
   every Uproot page submission.
@@ -103,10 +103,9 @@ immutable `Assessment` value:
 `cleared` means that the score met
 `MOTION_ATTESTATION_SCORE_THRESHOLD`. Despite its name,
 `failed_checks` counts suspicious analyzer verdicts, not technical failures. A
-sidecar outage, timeout, malformed response, simulated session, or page without
-a completed verification does not appear in the ledger. Therefore, zero checks
-means **no verdict was recorded**; it must not be interpreted as a successful
-attestation.
+sidecar outage, timeout, malformed response, or page without a completed verification
+does not appear in the ledger. Therefore, zero checks means **no verdict was recorded**;
+it must not be interpreted as a successful attestation.
 
 Each ledger entry contains:
 
