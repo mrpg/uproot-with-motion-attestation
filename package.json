@@ -8,9 +8,9 @@
     "node": ">=18"
   },
   "scripts": {
-    "prepare:motion-attestation": "node motion_attestation/prepare-client.mjs",
+    "prepare:motion-attestation": "node motion-attestation/prepare-client.mjs",
     "start": "./run.sh",
-    "start:sidecar": "node motion_attestation/server.mjs"
+    "start:sidecar": "node motion-attestation/server.mjs"
   },
   "dependencies": {
     "motion-attestation": "1.0.0"

@@ -1,0 +1,60 @@
+{% block main %}
+
+<p>
+    <b>{{ checked_participants }}</b> of <b>{{ total_participants }}</b> participants have a recorded verdict;
+    <b>{{ flagged_participants }}</b> have at least one below-threshold verdict.
+    There are <b>{{ total_checks }}</b> completed page-level checks in total.
+</p>
+
+<div class="table-responsive">
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th scope="col">Participant</th>
+                <th scope="col">Status</th>
+                <th scope="col">Checks</th>
+                <th scope="col">Below threshold</th>
+                <th scope="col">Last score</th>
+                <th scope="col">Minimum score</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for name, checks, failed_checks, last_score, min_score, flagged in rows %}
+            <tr>
+                <td>{{ name }}</td>
+                <td>
+                    {% if not checks %}
+                    <span class="badge text-bg-secondary">No verdict</span>
+                    {% elif flagged %}
+                    <span class="badge text-bg-danger">Flagged</span>
+                    {% else %}
+                    <span class="badge text-bg-success">Cleared</span>
+                    {% endif %}
+                </td>
+                <td>{{ checks }}</td>
+                <td>{{ failed_checks }}</td>
+                <td>
+                    {% if last_score is none %}
+                    <span class="text-body-secondary">—</span>
+                    {% else %}
+                    {{ last_score | fmtnum(places=3) }}
+                    {% endif %}
+                </td>
+                <td>
+                    {% if min_score is none %}
+                    <span class="text-body-secondary">—</span>
+                    {% else %}
+                    {{ min_score | fmtnum(places=3) }}
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<p class="text-body-secondary mb-0">
+    “No verdict” includes pages not yet submitted and checks that could not complete; it does not mean cleared.
+</p>
+
+{% endblock main %}

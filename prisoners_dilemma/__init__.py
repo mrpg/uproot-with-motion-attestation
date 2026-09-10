@@ -12,7 +12,10 @@ from fastapi import Request
 from fastapi.responses import Response
 from uproot.fields import *
 from uproot.smithereens import *
+from uproot.types import PlayerIdentifier
 
+from motion_attestation import Assessment
+from motion_attestation import assessments as motion_attestation_assessments
 from motion_attestation import handle_request as handle_motion_attestation
 
 DESCRIPTION = "Prisoner's dilemma"
@@ -58,15 +61,61 @@ class Results(Page):
 
 
 async def api2(
+    session: SessionType,
     request: Request,
     player: PlayerType | None = None,
 ) -> Response:
     """Give the project-wide browser adapter an authenticated app endpoint."""
-    return await handle_motion_attestation(__name__, request, player)
+    return await handle_motion_attestation(__name__, session, request, player)
+
+
+def digest(session: SessionType) -> dict[str, Any]:
+    """Return only participant identifiers and motion-attestation summaries."""
+    rows = []
+    checked_participants = 0
+    flagged_participants = 0
+    total_checks = 0
+    player_assessments = motion_attestation_assessments(
+        session,
+        app_name=__name__,
+    )
+
+    for player in session.players:
+        pid = PlayerIdentifier(sname=session.name, uname=player.name)
+        attestation = player_assessments.get(pid, Assessment())
+
+        if attestation.checks:
+            checked_participants += 1
+        if attestation.flagged:
+            flagged_participants += 1
+
+        total_checks += attestation.checks
+        rows.append(
+            (
+                player.name,
+                attestation.checks,
+                attestation.failed_checks,
+                attestation.last_score,
+                attestation.min_score,
+                attestation.flagged,
+            )
+        )
+
+    return {
+        "checked_participants": checked_participants,
+        "flagged_participants": flagged_participants,
+        "rows": rows,
+        "total_checks": total_checks,
+        "total_participants": len(rows),
+    }
 
 
 def pipeline(session: SessionType) -> list[dict[str, Any]]:
     rows = []
+    player_assessments = motion_attestation_assessments(
+        session,
+        app_name=__name__,
+    )
 
     for group in session.groups(app=__name__):
         players = group.players
@@ -78,6 +127,8 @@ def pipeline(session: SessionType) -> list[dict[str, Any]]:
             other_data = other.within(app=__name__)
             cooperate = player_data.get("cooperate")
             other_cooperate = other_data.get("cooperate")
+            pid = PlayerIdentifier(sname=session.name, uname=player.name)
+            attestation = player_assessments.get(pid, Assessment())
 
             rows.append(
                 {
@@ -89,15 +140,9 @@ def pipeline(session: SessionType) -> list[dict[str, Any]]:
                     "other_uname": other.name,
                     "other_cooperate": other_cooperate,
                     "payoff": player_data.get("payoff"),
-                    "motion_attestation_checks": player_data.get(
-                        "motion_attestation_checks", 0
-                    ),
-                    "motion_attestation_failed_checks": player_data.get(
-                        "motion_attestation_failed_checks", 0
-                    ),
-                    "motion_attestation_min_score": player_data.get(
-                        "motion_attestation_min_score"
-                    ),
+                    "motion_attestation_checks": attestation.checks,
+                    "motion_attestation_failed_checks": attestation.failed_checks,
+                    "motion_attestation_min_score": attestation.min_score,
                 }
             )
 

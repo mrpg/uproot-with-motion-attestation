@@ -12,7 +12,7 @@ MOTION_ATTESTATION_PROXY_KEY="$(
 
 npm run prepare:motion-attestation --silent
 
-node motion_attestation/server.mjs &
+node motion-attestation/server.mjs &
 motion_pid=$!
 uproot_pid=""
 
@@ -30,7 +30,7 @@ shutdown() {
 
 trap shutdown EXIT INT TERM
 
-node motion_attestation/wait.mjs
+node motion-attestation/wait.mjs
 
 uv run uproot run "$@" &
 uproot_pid=$!

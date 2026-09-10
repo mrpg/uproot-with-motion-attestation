@@ -23,8 +23,9 @@ Node motion-attestation sidecar
 ```
 
 The browser never talks to the sidecar directly. Uproot authenticates the
-participant, the Python bridge associates each challenge and result with that
-participant, and only the Python process knows the sidecar key.
+participant, the Python bridge cryptographically binds each challenge to that
+participant and app, and only the Python process knows the sidecar key. The
+binding is stateless: no challenge is written to participant storage.
 
 The integration has deliberately narrow seams:
 
@@ -36,8 +37,9 @@ The integration has deliberately narrow seams:
 - [`prisoners_dilemma/__init__.py`](prisoners_dilemma/__init__.py) delegates its
   authenticated `api2()` endpoint to the Python bridge. Nothing in the game or
   payoff logic depends on attestation.
-- [`motion_attestation/`](motion_attestation/) contains the Python bridge and
-  the small Node-side adapter. It is the reusable integration boundary.
+- [`motion_attestation.py`](motion_attestation.py) is the reusable Python
+  bridge and typed Appendmuch ledger API. [`motion-attestation/`](motion-attestation/)
+  contains the small Node-side adapter.
 - [`run.sh`](run.sh) creates an ephemeral proxy key, starts the sidecar, waits
   for readiness, starts Uproot, and shuts both processes down together.
 
@@ -51,6 +53,10 @@ uv sync
 npm ci
 ./run.sh
 ```
+
+Any arguments after `./run.sh` are passed unchanged to `uproot run`; for
+example, `./run.sh --host 127.0.0.1 --port 9000`. The wrapper does not choose
+Uproot host or port defaults.
 
 Debian 13's standard `nodejs` 20 and `npm` 9 packages are sufficient; this
 example does not require NodeSource, nvm, or another third-party Node build.
@@ -68,19 +74,111 @@ static directory after checking its SHA-256 digest. That generated file and
 
 The bridge does not retain raw mouse positions, keystroke timings, touch data,
 scroll data, or sensor readings. Raw signals pass through Uproot to the local
-analyzer and are discarded. Each participant instead receives:
+analyzer and are discarded.
 
-- `motion_attestation_checks`
-- `motion_attestation_failed_checks`
-- `motion_attestation_flagged`
-- `motion_attestation_last_score`
-- `motion_attestation_min_score`
-- `motion_attestation_records`, containing bounded page-level summaries with
-  score, flags, duration, and counts by signal type
+Each valid analyzer verdict becomes one immutable `MotionAttestationEntry` in
+a session-wide Uproot model. The model identifier is created lazily in the
+session field `motion_attestation_log`; before the first valid verdict that
+field is absent. Uproot's model API stores each entry as a separate Appendmuch
+event, so recording a new page does not rewrite or duplicate earlier pages.
 
-The example's `pipeline()` exports the check count, failed-check count, and
-minimum score alongside the ordinary prisoner's-dilemma data. The complete
-bounded summaries remain available in player data.
+No attestation result, counter, score, or challenge field is written to the
+player. The typed ledger is the single source of truth. Pending challenges are
+returned as HMAC-authenticated envelopes bound to the session, participant,
+and app; Python validates and unwraps an envelope before proxying it to the
+sidecar. The sidecar remains responsible for challenge expiry and one-use
+consumption.
+
+`assessment()` and `assessments()` dynamically reduce ledger entries into an
+immutable `Assessment` value:
+
+| Assessment attribute | Type | Meaning |
+| --- | --- | --- |
+| `checks` | `int` | Number of completed analyzer verdicts with a valid score |
+| `failed_checks` | `int` | Number of those verdicts for which `cleared` was false |
+| `flagged` | `bool` | True when at least one verdict did not clear; a derived property |
+| `last_score` | `float \| None` | Most recent score, or `None` when there is no verdict |
+| `min_score` | `float \| None` | Lowest score, or `None` when there is no verdict |
+
+`cleared` means that the score met
+`MOTION_ATTESTATION_SCORE_THRESHOLD`. Despite its name,
+`failed_checks` counts suspicious analyzer verdicts, not technical failures. A
+sidecar outage, timeout, malformed response, simulated session, or page without
+a completed verification does not appear in the ledger. Therefore, zero checks
+means **no verdict was recorded**; it must not be interpreted as a successful
+attestation.
+
+Each ledger entry contains:
+
+```python
+MotionAttestationEntry(
+    pid=PlayerIdentifier(...),        # participant identity
+    app_name="prisoners_dilemma",
+    page_index=2,                     # zero-based index in player.page_order
+    cleared=True,                     # score met the configured threshold
+    score=0.875,
+    flags=[],                         # analyzer reasons, if any
+    duration_ms=5123.0,               # browser-reported collection duration
+    signal_counts={                   # counts only; never the raw signals
+        "m": 120, "c": 2, "k": 0, "s": 4, "tc": 0,
+        "ac": 0, "gy": 0, "or": 0, "ev": 128, "bc": 2,
+    },
+)
+```
+
+The ledger query returns `(entry_id, verified_at, entry)` tuples. `entry_id` is
+a UUID and `verified_at` is Appendmuch's server-side Unix timestamp in seconds;
+ordering is determined by the append log, not by a browser clock.
+
+Assess one participant when only one result is needed:
+
+```python
+from motion_attestation import assessment
+
+
+result = assessment(session, player, app_name="prisoners_dilemma")
+print(result.checks, result.failed_checks, result.flagged, result.min_score)
+```
+
+For a digest or pipeline, scan the ledger once and look up each participant:
+
+```python
+from motion_attestation import Assessment, assessments
+from uproot.types import PlayerIdentifier
+
+
+by_player = assessments(session, app_name="prisoners_dilemma")
+for player in session.players:
+    pid = PlayerIdentifier(sname=session.name, uname=player.name)
+    result = by_player.get(pid, Assessment())
+```
+
+Read the immutable page-level records through the integration helper. Both
+filters are optional, so the same helper can read the whole session ledger:
+
+```python
+from motion_attestation import read_entries
+
+
+for entry_id, verified_at, entry in read_entries(
+    session,
+    app_name="prisoners_dilemma",
+    player=player,
+):
+    print(entry.page_index, entry.score, entry.cleared, verified_at)
+```
+
+The example's `pipeline()` exports the dynamically derived check count,
+failed-check count, and minimum score alongside the ordinary
+prisoner's-dilemma data. Those export columns are not player fields; the
+append-only ledger remains the sole persisted attestation data.
+
+The session's Digest view is a live example of reading these fields. Its
+[`digest()`](prisoners_dilemma/__init__.py) projection and
+[`AdminDigest.html`](prisoners_dilemma/AdminDigest.html) display only the
+participant identifier and motion-attestation summaries—never the
+prisoner's-dilemma choices or payoffs. “No verdict” is shown separately from
+“Cleared” and “Flagged.”
 
 Attestation is observational and fail-open in this example. A timeout, sidecar
 failure, or suspicious score is recorded when possible, but never changes page
@@ -89,8 +187,8 @@ explicitly if your study requires one.
 
 ## Use the pattern in another Uproot project
 
-1. Copy `motion_attestation/`, `_static/motion-attestation.js`,
-   `ProjectBody.html`, and `run.sh`.
+1. Copy `motion_attestation.py`, `motion-attestation/`,
+   `_static/motion-attestation.js`, `ProjectBody.html`, and `run.sh`.
 2. Add the npm dependency and scripts from `package.json`, retain the npm
    lockfile, and add `httpx` to the Python dependencies.
 3. Delegate each participating app's modern `api2()` endpoint:
@@ -103,15 +201,16 @@ explicitly if your study requires one.
 
 
    async def api2(
+       session: SessionType,
        request: Request,
        player: PlayerType | None = None,
    ) -> Response:
-       return await handle_motion_attestation(__name__, request, player)
+       return await handle_motion_attestation(__name__, session, request, player)
    ```
 
-4. Add whichever aggregate fields you need to your pipeline or digest. Keep
-   attestation out of the experimental treatment and payoff code unless that
-   coupling is an intentional part of the design.
+4. Use `assessment()` for one participant or `assessments()` for a one-scan
+   digest/pipeline projection. Keep attestation out of the experimental
+   treatment and payoff code unless that coupling is intentional.
 
 If an app already uses `api2()`, route requests bearing the
 `X-Motion-Attestation-Action` header (or for which `is_request(request)` is
@@ -125,8 +224,6 @@ unchanged.
 | `MOTION_ATTESTATION_SCORE_THRESHOLD` | `0.5` | Minimum score considered cleared |
 | `MOTION_ATTESTATION_CHALLENGE_TTL_MS` | `60000` | One-use challenge lifetime |
 | `MOTION_ATTESTATION_PORT` | `35001` | Loopback sidecar port |
-| `UPROOT_HOST` | `0.0.0.0` | Uproot bind address |
-| `PORT` | `8000` | Uproot HTTP port |
 
 `MOTION_ATTESTATION_URL` and `MOTION_ATTESTATION_PROXY_KEY` are internal
 process settings created by `run.sh`; they are not browser configuration.
