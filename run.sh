@@ -32,9 +32,7 @@ trap shutdown EXIT INT TERM
 
 node motion_attestation/wait.mjs
 
-uv run uproot run \
-    -h "${UPROOT_HOST:-0.0.0.0}" \
-    -p "${PORT:-8000}" &
+uv run uproot run "$@" &
 uproot_pid=$!
 
 set +e

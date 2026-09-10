@@ -1197,7 +1197,7 @@ wheels = [
 [[package]]
 name = "uproot-science"
 version = "0.5.1"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/mrpg/uproot.git?rev=main#c9b466d76c9e3ac9bfc29f58a837fdc7e1d10ee7" }
 dependencies = [
     { name = "appendmuch" },
     { name = "click" },
@@ -1218,9 +1218,6 @@ dependencies = [
     { name = "watchdog" },
     { name = "websockets" },
     { name = "wtforms" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/6e/8b/650322139af844aff888cbfdbe3b6955669b4c4d4108c9bdf49b9f6c2d94/uproot_science-0.5.1-py3-none-any.whl", hash = "sha256:02f37fdcbf45e2aa104dd24cf86453597fb38820d6d4000318000ae97fdaae74", size = 14887559, upload-time = "2026-09-03T10:23:38.231Z" },
 ]
 
 [package.optional-dependencies]
@@ -1256,8 +1253,8 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.28,<1" },
-    { name = "uproot-science", specifier = "<1" },
-    { name = "uproot-science", extras = ["pg"], marker = "extra == 'pg'", specifier = "<1" },
+    { name = "uproot-science", git = "https://github.com/mrpg/uproot.git?rev=main" },
+    { name = "uproot-science", extras = ["pg"], marker = "extra == 'pg'", git = "https://github.com/mrpg/uproot.git?rev=main" },
 ]
 provides-extras = ["pg"]
 
