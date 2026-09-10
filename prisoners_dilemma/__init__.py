@@ -1,0 +1,113 @@
+# Docs are available at https://uproot.science/
+# Examples are available at https://github.com/mrpg/uproot-examples
+#
+# This example app is under the 0BSD license. You can use it freely and build on it
+# without any limitations and without any attribution. However, these two lines must be
+# preserved in any uproot app (the license file is automatically installed in projects):
+#
+# Third-party dependencies:
+# - uproot: LGPL v3+, see ../uproot_license.txt
+
+from fastapi import Request
+from fastapi.responses import Response
+from uproot.fields import *
+from uproot.smithereens import *
+
+from motion_attestation import handle_request as handle_motion_attestation
+
+DESCRIPTION = "Prisoner's dilemma"
+SUGGESTED_MULTIPLE = 2
+
+
+class C:
+    PAYOFF_MATRIX = {
+        (True, True): 10,
+        (True, False): 0,
+        (False, True): 15,
+        (False, False): 3,
+    }
+
+
+class Instructions(Page):
+    pass
+
+
+class GroupPlease(GroupCreatingWait):
+    group_size = 2
+
+
+class Dilemma(Page):
+    fields = dict(
+        cooperate=RadioField(
+            label="Do you wish to cooperate?",
+            choices=[(True, "Yes"), (False, "No")],
+        ),
+    )
+
+
+class Sync(SynchronizingWait):
+    @classmethod
+    def all_here(page, group: GroupType) -> None:
+        for player in group.players:
+            other = player.other_in_group
+            player.payoff = C.PAYOFF_MATRIX[player.cooperate, other.cooperate]
+
+
+class Results(Page):
+    pass
+
+
+async def api2(
+    request: Request,
+    player: PlayerType | None = None,
+) -> Response:
+    """Give the project-wide browser adapter an authenticated app endpoint."""
+    return await handle_motion_attestation(__name__, request, player)
+
+
+def pipeline(session: SessionType) -> list[dict[str, Any]]:
+    rows = []
+
+    for group in session.groups(app=__name__):
+        players = group.players
+        player1, player2 = players
+
+        for member_id, player in enumerate(players):
+            other = player2 if member_id == 0 else player1
+            player_data = player.within(app=__name__)
+            other_data = other.within(app=__name__)
+            cooperate = player_data.get("cooperate")
+            other_cooperate = other_data.get("cooperate")
+
+            rows.append(
+                {
+                    "session": session.name,
+                    "group": group.name,
+                    "uname": player.name,
+                    "member_id": member_id,
+                    "cooperate": cooperate,
+                    "other_uname": other.name,
+                    "other_cooperate": other_cooperate,
+                    "payoff": player_data.get("payoff"),
+                    "motion_attestation_checks": player_data.get(
+                        "motion_attestation_checks", 0
+                    ),
+                    "motion_attestation_failed_checks": player_data.get(
+                        "motion_attestation_failed_checks", 0
+                    ),
+                    "motion_attestation_min_score": player_data.get(
+                        "motion_attestation_min_score"
+                    ),
+                }
+            )
+
+    return rows
+
+
+page_order = [
+    Instructions,
+    GroupPlease,
+    Dilemma,
+    Sync,
+    Results,
+]

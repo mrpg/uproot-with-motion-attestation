@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "uproot-with-motion-attestation"
+version = "0.1.0"
+description = "A minimal Uproot project using motion-attestation as a Node sidecar"
+readme = "README.md"
+license = "0BSD"
+requires-python = ">=3.12"
+dependencies = [
+    "uproot-science<1",
+    "httpx>=0.28,<1",
+]
+
+[dependency-groups]
+dev = [
+    "black",
+    "isort",
+    "mypy",
+    "pre-commit",
+    "pytest>=9,<10",
+    "pytest-asyncio>=1,<2",
+    "ruff",
+]
+
+[project.optional-dependencies]
+pg = [
+    "uproot-science[pg]<1",
+]
+
+[tool.setuptools]
+packages = []
+
+[tool.black]
+target-version = ["py313"]
+
+[tool.isort]
+profile = "black"
+
+[tool.ruff.lint]
+ignore = ["F403", "F405", "RUF012", "C408", "BLE001"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_unreachable = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]
+
+[tool.uv]
+python-preference = "system"

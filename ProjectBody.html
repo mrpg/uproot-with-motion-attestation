@@ -1,0 +1,7 @@
+{% if player is not none and player.get("app") is not none and not _uproot_simulate %}
+    <script
+        id="motion-attestation-loader"
+        type="module"
+        src="{{ projectstatic('motion-attestation.js') }}"
+        data-app="{{ player.app }}"></script>
+{% endif %}

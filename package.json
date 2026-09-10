@@ -1,0 +1,18 @@
+{
+  "name": "uproot-with-motion-attestation",
+  "private": true,
+  "version": "0.1.0",
+  "license": "0BSD",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "prepare:motion-attestation": "node motion_attestation/prepare-client.mjs",
+    "start": "./run.sh",
+    "start:sidecar": "node motion_attestation/server.mjs"
+  },
+  "dependencies": {
+    "motion-attestation": "1.0.0"
+  }
+}
