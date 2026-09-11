@@ -13,6 +13,6 @@
     "start:sidecar": "node motion-attestation/server.mjs"
   },
   "dependencies": {
-    "motion-attestation": "1.0.0"
+    "motion-attestation": "1.1.0"
   }
 }
