@@ -98,7 +98,7 @@ immutable `Assessment` value:
 | `failed_checks` | `int` | Number of those verdicts for which `cleared` was false |
 | `flagged` | `bool` | True when at least one verdict did not clear; a derived property |
 | `last_score` | `float \| None` | Most recent score, or `None` when there is no verdict |
-| `min_score` | `float \| None` | Lowest score, or `None` when there is no verdict |
+| `mean_score` | `float \| None` | Mean score across all verdicts, or `None` when there is no verdict |
 
 `cleared` means that the score met
 `MOTION_ATTESTATION_SCORE_THRESHOLD`. Despite its name,
@@ -136,7 +136,7 @@ from motion_attestation import assessment
 
 
 result = assessment(session, player, app_name="prisoners_dilemma")
-print(result.checks, result.failed_checks, result.flagged, result.min_score)
+print(result.checks, result.failed_checks, result.flagged, result.mean_score)
 ```
 
 For a digest or pipeline, scan the ledger once and look up each participant:
@@ -168,7 +168,7 @@ for entry_id, verified_at, entry in read_entries(
 ```
 
 The example's `pipeline()` exports the dynamically derived check count,
-failed-check count, and minimum score alongside the ordinary
+failed-check count, and mean score alongside the ordinary
 prisoner's-dilemma data. Those export columns are not player fields; the
 append-only ledger remains the sole persisted attestation data.
 
