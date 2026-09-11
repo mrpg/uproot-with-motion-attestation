@@ -96,7 +96,7 @@ def digest(session: SessionType) -> dict[str, Any]:
                 attestation.checks,
                 attestation.failed_checks,
                 attestation.last_score,
-                attestation.min_score,
+                attestation.mean_score,
                 attestation.flagged,
             )
         )
@@ -142,7 +142,7 @@ def pipeline(session: SessionType) -> list[dict[str, Any]]:
                     "payoff": player_data.get("payoff"),
                     "motion_attestation_checks": attestation.checks,
                     "motion_attestation_failed_checks": attestation.failed_checks,
-                    "motion_attestation_min_score": attestation.min_score,
+                    "motion_attestation_mean_score": attestation.mean_score,
                 }
             )
 

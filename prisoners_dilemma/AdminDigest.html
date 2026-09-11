@@ -15,11 +15,11 @@
                 <th scope="col">Checks</th>
                 <th scope="col">Below threshold</th>
                 <th scope="col">Last score</th>
-                <th scope="col">Minimum score</th>
+                <th scope="col">Mean score</th>
             </tr>
         </thead>
         <tbody>
-        {% for name, checks, failed_checks, last_score, min_score, flagged in rows %}
+        {% for name, checks, failed_checks, last_score, mean_score, flagged in rows %}
             <tr>
                 <td>{{ name }}</td>
                 <td>
@@ -41,10 +41,10 @@
                     {% endif %}
                 </td>
                 <td>
-                    {% if min_score is none %}
+                    {% if mean_score is none %}
                     <span class="text-body-secondary">—</span>
                     {% else %}
-                    {{ min_score | fmtnum(places=3) }}
+                    {{ mean_score | fmtnum(places=3) }}
                     {% endif %}
                 </td>
             </tr>

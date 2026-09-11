@@ -50,7 +50,8 @@ class Assessment:
     checks: int = 0
     failed_checks: int = 0
     last_score: float | None = None
-    min_score: float | None = None
+    mean_score: float | None = None
+    total_score: float = 0.0
 
     @property
     def flagged(self) -> bool:
@@ -287,15 +288,14 @@ def update_assessment(
     entry: MotionAttestationEntry,
 ) -> Assessment:
     """Return the projection produced by appending one entry."""
+    new_checks = current.checks + 1
+    new_total = current.total_score + entry.score
     return Assessment(
-        checks=current.checks + 1,
+        checks=new_checks,
         failed_checks=current.failed_checks + (not entry.cleared),
         last_score=entry.score,
-        min_score=(
-            entry.score
-            if current.min_score is None
-            else min(current.min_score, entry.score)
-        ),
+        mean_score=new_total / new_checks,
+        total_score=new_total,
     )
 
 

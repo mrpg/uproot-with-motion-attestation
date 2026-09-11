@@ -101,13 +101,15 @@ def test_digest_contains_only_attestation_summary(
             PlayerIdentifier(sname="S1", uname="P1"): motion_attestation.Assessment(
                 checks=2,
                 last_score=0.9,
-                min_score=0.8,
+                mean_score=0.85,
+                total_score=1.7,
             ),
             PlayerIdentifier(sname="S1", uname="P2"): motion_attestation.Assessment(
                 checks=3,
                 failed_checks=1,
                 last_score=0.7,
-                min_score=0.3,
+                mean_score=0.633,
+                total_score=1.9,
             ),
         }
 
@@ -121,8 +123,8 @@ def test_digest_contains_only_attestation_summary(
         "checked_participants": 2,
         "flagged_participants": 1,
         "rows": [
-            ("P1", 2, 0, 0.9, 0.8, False),
-            ("P2", 3, 1, 0.7, 0.3, True),
+            ("P1", 2, 0, 0.9, 0.85, False),
+            ("P2", 3, 1, 0.7, 0.633, True),
             ("P3", 0, 0, None, None, False),
         ],
         "total_checks": 5,

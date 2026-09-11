@@ -167,13 +167,15 @@ def test_assessments_are_derived_only_from_ledger_entries(
             checks=3,
             failed_checks=1,
             last_score=0.7,
-            min_score=0.3,
+            mean_score=(0.8 + 0.3 + 0.7) / 3,
+            total_score=0.8 + 0.3 + 0.7,
         ),
         pid2: motion_attestation.Assessment(
             checks=1,
             failed_checks=0,
             last_score=0.9,
-            min_score=0.9,
+            mean_score=0.9,
+            total_score=0.9,
         ),
     }
     assert result[pid1].flagged is True
@@ -317,7 +319,7 @@ async def test_verify_records_summary_and_exposes_only_verdict(
             "motion_attestation_failed_checks",
             "motion_attestation_flagged",
             "motion_attestation_last_score",
-            "motion_attestation_min_score",
+            "motion_attestation_mean_score",
             "motion_attestation_records",
         }
         & player.data.keys()
